@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 #Copyright (C) 2008 Brandon J. Lewis
 #
 #License:
@@ -67,7 +65,8 @@ element_pad = (goocanvas.Rect,
         "stroke_color" : "black",
     },
     {
-        "normal_color" : "green",
+        "normal_color" : 0xFFFF00FF,
+        "blocked_color" : 0xAAAA00FF,
         "active_color" : "red"
     }
 )
@@ -199,6 +198,26 @@ def widget_lookup(prop):
 class LinkError(Exception):
     pass
 
+blocked_pads = []
+
+def block_pad(pad):
+    global blocked_pads
+    def pad_blocked(pad):
+        blocked_pads.append(pad)
+    pad.set_blocked_async(true, pad_blocked)
+
+def unblock_pad(pad):
+    global blocked_pads
+    def pad_unblocked(pad):
+        blocked_pads.remove(pad)
+    pad.set_blocked_async(false, pad_unblocked)
+
+def unblock_all_pads(pad):
+    global blocked_pads
+    for pad in blocked_pads:
+        unblock_pad(pad)
+
+
 def update_link_start(pos, item):
     """internal callback of an experimental feature"""
     arrow = item.get_data("link_arrow")
@@ -293,19 +312,22 @@ def make_linkable(canvas, item, make_cb, break_cb):
     canvas.get_root_item().connect("motion_notify_event", 
         update_link_indicator, canvas, item)
 
+
 def link_pads(src, sink):
-    src_el = src.get_data("parent_element")
-    sink_el = sink.get_data("parent_element")
     src_pad = src.get_data("pad")
     sink_pad = sink.get_data("pad")
+    src_pad.set_blocked_async(False, block_pad_cb)
+    sink_pad.set_blocked_async(False, block_pad_cb)
     if not (src_pad.is_linked() or sink_pad.is_linked()):
         if src_pad.can_link(sink_pad):
             try:
                 print "link: %r -> %r" % (src_pad, sink_pad)
-                src_el.link(sink_el)
+                src_pad.link(sink_pad)
             except gst.LinkError, e:
                 print e.message
                 print "could not link %r to %r" % (src_pad, sink_pad)
+                src_pad.set_blocked_async(True, block_pad_cb)
+                sink_pad.set_blocked_async(True, block_pad_cb)
 
 def unlink_pads(src, sink):
     src = src.get_data("pad").get_parent_element()
@@ -356,6 +378,7 @@ def make_template_widget(canvas, pad, parent):
     return ret
 
 def make_pad_widget(canvas, pad, parent):
+
     def linked_cb(pad, target):
         src = pad.get_data("box")
         sink = target.get_data("box")
@@ -364,8 +387,8 @@ def make_pad_widget(canvas, pad, parent):
 
     def unlinked_cb(pad, target):
         src = pad.get_data("box")
-        pad.set_blocked_async(True, printall)
-        target.set_blocked_async(True, printall)
+        pad.set_blocked_async(True, block_pad_cb)
+        target.set_blocked_async(True, block_pad_cb)
         gobject.idle_add(unlink_objects, src)
 
     box = make_item(element_pad)
@@ -384,6 +407,7 @@ def make_pad_widget(canvas, pad, parent):
     box.set_data("pad", pad)
     box.set_data("direction", direction)
     pad.set_data("widget", ret)
+    print pad.get_data("widget")
     pad.set_data("box", box)
     text.props.text = pad.get_name()
     make_linkable(canvas, box, link_pads, unlink_pads)
@@ -436,6 +460,15 @@ def make_property_editor():
 
     return x, update
 
+def block_pad_cb(pad, state):
+    def inner(pad, state):
+        print "blocking pad: %r" % pad
+        widget = pad.get_data("box")
+        color = "blocked_color" if state else "normal_color"
+        widget.props.fill_color_rgba = widget.get_data(color)
+        return False
+    gobject.idle_add(inner, pad, state)
+
 def make_element_widget(canvas, element):
     def add_pad_widget(pad_widget):
         d = pad_widget.get_data("direction")
@@ -446,12 +479,12 @@ def make_element_widget(canvas, element):
 
     def show_pad(pad):
         w = make_pad_widget(canvas, pad, element)
+        pad.set_blocked_async(True, block_pad_cb)
         add_pad_widget(w)
         return False
 
     def pad_added(element, pad):
         print pad.get_name(), pad.get_caps()
-        pad.set_blocked_async(True, printall)
         gobject.idle_add(show_pad, pad)
 
     def hide_pad(pad):
@@ -485,7 +518,7 @@ def make_element_widget(canvas, element):
             add_pad_widget(make_template_widget(canvas, pad, element))
 
     for pad in element.pads():
-        add_pad_widget(make_pad_widget(canvas, pad, element))
+        show_pad(pad)
 
     element.connect("pad-added", pad_added)
     element.connect("pad-removed", pad_removed)
@@ -509,6 +542,13 @@ def make_canvas(pipeline, sel_changed_cb):
         pipeline.add(el)
         return True
 
+    def dup_element(button):
+        for obj in canvas.get_data("selected_objects"):
+            factory = obj.get_data("element").get_factory().get_name()
+            element = gst.element_factory_make(factory)
+            coords[element] = point_sum(pos(obj), (30, 100))
+            pipeline.add(element)
+
     def remove_element(button):
         for obj in canvas.get_data("selected_objects"):
             pipeline.remove(obj.get_data("element"))
@@ -516,7 +556,7 @@ def make_canvas(pipeline, sel_changed_cb):
 
     def drag_data_received(w, context, x, y, data, info, time):
         context.finish(True, False, time)
-        add_element(data.data, x, y)
+        add_element(data.data, *pixel_coords(canvas, (x, y)))
 
     def sel_cb(selected, deselected):
         for obj in selected:
@@ -540,6 +580,7 @@ def make_canvas(pipeline, sel_changed_cb):
 
     return canvas, (
         ("Delete", remove_element, ()),
+        ("Duplicate", dup_element, ()),
     )
 
 def make_browser():
@@ -600,7 +641,8 @@ def make_buttons(pipeline, commands):
             old, new, pending = message.parse_state_changed()
             if old != gst.STATE_NULL:
                 buttons[old].set_sensitive(True)
-            buttons[new].set_sensitive(False)
+            if new != gst.STATE_NULL:
+                buttons[new].set_sensitive(False)
         elif message.type == gst.MESSAGE_ERROR:
             print message.parse_error()
         elif message.type == gst.MESSAGE_WARNING:
