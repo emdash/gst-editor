@@ -33,6 +33,8 @@ from goocanvashelper import *
 
 WIN_SIZE = (400, 360)
 
+## Canvas item style objects
+
 element_box = (goocanvas.Rect,
     {
         "fill_color" : "grey",
@@ -99,8 +101,6 @@ link_tool = (goocanvas.Polyline,
     {}
 )
 
-# our selection box is a translucent blue rectangle with 
-# a light blue outline
 selection_box = (goocanvas.Rect,
     {
         "stroke_color_rgba" : 0x33CCFF66,
@@ -268,7 +268,7 @@ def block_pad_cb(pad, state):
         return False
     gobject.idle_add(inner, pad, state)
 
-def make_template_widget(canvas, pad, parent):
+def make_request_template_widget(canvas, pad, parent):
     def enter(item, target, event):
         state[0] = True
         if state[1]:
@@ -366,8 +366,11 @@ def num_widget(prop):
     return ret
 
 def choice_widget(prop):
-    if hasattr(prop, "_getChoices"):
-        return (gtk.ComboBox(prop._getChoices()), "changed",
+    if prop.enum_class.__enum_values__:
+        ret = gtk.combo_box_new_text()
+        for choice in prop.enum_class.__enum_values__.values():
+            ret.append_text(str(choice))
+        return (ret, "changed", 
             gtk.ComboBox.get_active, gtk.ComboBox.set_active)
     else:
         return str_widget(prop)
@@ -381,27 +384,15 @@ def file_widget(prop):
         gtk.FileChooserButton.get_filename,
             gtk.FileChooserButton.set_filename)
 
-def method_widget(prop):
-    ret = gtk.combo_box_new_text()
-    for m in ["solid", "green", "blue", "custom"]:
-        ret.append_text(m)
-    return (ret, "changed", gtk.ComboBox.get_active, 
-        gtk.ComboBox.set_active)
-
-def pattern_widget(prop):
-    ret = gtk.combo_box_new_text()
-    for m in ["smpte", "snow", "black", "white", "red", "green", "blue",
-        "checkers-1", "checkers-2", "checkers-4", "checkers-8",
-        "circular", "blink"]:
-        ret.append_text(m)
-    return (ret, "changed", gtk.ComboBox.get_active, 
-        gtk.ComboBox.set_active)
+def caps_widget(prop):
+    return (gtk.Label("Caps!", "copy-to-clipboard", null_func, null_func)) 
+# override default type -> widget mappings based on property name
 
 name_widgets = {
     "location" : file_widget,
-    "method" : method_widget,
-    "pattern" : pattern_widget,
 }
+
+# Default type -> widget mappings
 
 prop_widgets = {
     gobject.TYPE_STRING : str_widget,
@@ -413,7 +404,10 @@ prop_widgets = {
     gobject.TYPE_LONG : num_widget,
     gobject.TYPE_ULONG : num_widget,
     gobject.TYPE_BOOLEAN : bool_widget,
+    gst.Caps : caps_widget,
 }
+
+# Lookup the widget for a given property
 
 def widget_lookup(prop):
     if name_widgets.has_key(prop.name):
@@ -429,6 +423,8 @@ def widget_lookup(prop):
         null_func)
 
 def make_property_editor():
+
+    # creates a widget for a given proprety and connects signal handlers
     def make_prop_widget(prop, elements):
         def changed_cb(object, elements):
             for element in elements:
@@ -446,6 +442,7 @@ def make_property_editor():
         widget.set_size_request(100, 30)
         return widget
     
+    # callback which updates the property browser to the current selection
     def update(elements):
         # clear old property widgets
         for c in props.get_children():
@@ -457,6 +454,7 @@ def make_property_editor():
         if element_props:
             element_props = reduce(lambda a, b : a.intersection(b),
                 element_props)
+            # create a widget for each property and pack it
             for prop in element_props:
                 widget = make_prop_widget(prop, elements)
                 label = gtk.Label(prop.name)
@@ -464,8 +462,10 @@ def make_property_editor():
                 props.pack_start(
                     hbox((label, "start", True, True),
                          (widget, "end", True, True)), True, False)
+        # show the new properties
         props.show_all()
 
+    # create the property browser
     props = vbox()
     ret = vbox((gtk.Label("Properties"), 'start', True, True),
         (props, "start", True, True))
@@ -523,7 +523,7 @@ def make_element_widget(canvas, element):
 
     for pad in element.get_pad_template_list():
         if pad.presence == gst.PAD_REQUEST:
-            add_pad_widget(make_template_widget(canvas, pad, element))
+            add_pad_widget(make_request_template_widget(canvas, pad, element))
 
     for pad in element.pads():
         show_pad(pad)
@@ -600,12 +600,12 @@ def make_browser():
     def get_data(w, context, s_d, info, time):
         row = w.get_cursor()[0][0]
         s_d.set(s_d.target, 8, treemodel[row][1])
-        
+
     # get list of all elements
     registry = gst.registry_get_default()
     registrylist = registry.get_feature_list(gst.ElementFactory)
-    registrylist.sort(lambda x, y: cmp(x.get_name(), y.get_name()))    
-    
+    registrylist.sort(lambda x, y: cmp(x.get_name(), y.get_name()))
+
     # create a tree view to display them
     treemodel = gtk.TreeStore(gobject.TYPE_PYOBJECT, gobject.TYPE_STRING)
     for item in registrylist:
