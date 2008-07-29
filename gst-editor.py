@@ -114,109 +114,12 @@ target = [
     ('GST_ELEMENT_NAME', 0, 0)
 ]
 
-def str_widget(prop):
-    return (gtk.Entry(), "changed", gtk.Entry.get_text, 
-        gtk.Entry.set_text)
-
-def num_widget(prop):
-    ret = (gtk.HScale(), "value-changed", gtk.HScale.get_value,
-        gtk.HScale.set_value)
-    minimum = float("-Infinity")
-    maximum = float("Infinity")
-    if hasattr(prop, "minimum"):
-        minimum = prop.minimum
-    if hasattr(prop, "maximum"):
-        maximum = prop.maximum
-    ret[0].set_range(minimum, maximum)
-    return ret
-
-def choice_widget(prop):
-    if hasattr(prop, "_getChoices"):
-        return (gtk.ComboBox(prop._getChoices()), "changed",
-            gtk.ComboBox.get_active, gtk.ComboBox.set_active)
-    else:
-        return str_widget(prop)
-
-def bool_widget(prop):
-    return (gtk.CheckButton(), "toggled", gtk.CheckButton.get_active,
-        gtk.CheckButton.set_active)
-
-def file_widget(prop):
-    return (gtk.FileChooserButton("File"), "selection-changed", 
-        gtk.FileChooserButton.get_filename,
-            gtk.FileChooserButton.set_filename)
-
-def method_widget(prop):
-    ret = gtk.combo_box_new_text()
-    for m in ["solid", "green", "blue", "custom"]:
-        ret.append_text(m)
-    return (ret, "changed", gtk.ComboBox.get_active, 
-        gtk.ComboBox.set_active)
-
-def pattern_widget(prop):
-    ret = gtk.combo_box_new_text()
-    for m in ["smpte", "snow", "black", "white", "red", "green", "blue",
-        "checkers-1", "checkers-2", "checkers-4", "checkers-8",
-        "circular", "blink"]:
-        ret.append_text(m)
-    return (ret, "changed", gtk.ComboBox.get_active, 
-        gtk.ComboBox.set_active)
-
-name_widgets = {
-    "location" : file_widget,
-    "method" : method_widget,
-    "pattern" : pattern_widget,
-}
-
-prop_widgets = {
-    gobject.TYPE_STRING : str_widget,
-    gobject.TYPE_DOUBLE : num_widget,
-    gobject.TYPE_FLOAT : num_widget,
-    gobject.TYPE_ENUM : choice_widget,
-    gobject.TYPE_INT : num_widget,
-    gobject.TYPE_UINT : num_widget,
-    gobject.TYPE_LONG : num_widget,
-    gobject.TYPE_ULONG : num_widget,
-    gobject.TYPE_BOOLEAN : bool_widget,
-}
-
-def widget_lookup(prop):
-    if name_widgets.has_key(prop.name):
-        return name_widgets[prop.name](prop)
-    elif prop_widgets.has_key(prop.value_type):
-        return prop_widgets[prop.value_type](prop)
-    elif hasattr(prop, "enum_class"):
-        return choice_widget(prop)
-    elif hasattr(prop, "minimum") or hasattr(prop, "maximum"):
-        return num_widget(prop)
-    #pick a random signal here, because we need to connect to something
-    return (gtk.Label("Unsupported"), "copy-clipboard", null_func,
-        null_func)
-
 ## App-Specific Functions
 
 class LinkError(Exception):
     pass
 
-blocked_pads = []
-
-def block_pad(pad):
-    global blocked_pads
-    def pad_blocked(pad):
-        blocked_pads.append(pad)
-    pad.set_blocked_async(true, pad_blocked)
-
-def unblock_pad(pad):
-    global blocked_pads
-    def pad_unblocked(pad):
-        blocked_pads.remove(pad)
-    pad.set_blocked_async(false, pad_unblocked)
-
-def unblock_all_pads(pad):
-    global blocked_pads
-    for pad in blocked_pads:
-        unblock_pad(pad)
-
+## Link-Related Functions
 
 def update_link_start(pos, item):
     """internal callback of an experimental feature"""
@@ -316,8 +219,8 @@ def make_linkable(canvas, item, make_cb, break_cb):
 def link_pads(src, sink):
     src_pad = src.get_data("pad")
     sink_pad = sink.get_data("pad")
-    src_pad.set_blocked_async(False, block_pad_cb)
-    sink_pad.set_blocked_async(False, block_pad_cb)
+    unblock_pad(src_pad)
+    unblock_pad(sink_pad)
     if not (src_pad.is_linked() or sink_pad.is_linked()):
         if src_pad.can_link(sink_pad):
             try:
@@ -326,13 +229,44 @@ def link_pads(src, sink):
             except gst.LinkError, e:
                 print e.message
                 print "could not link %r to %r" % (src_pad, sink_pad)
-                src_pad.set_blocked_async(True, block_pad_cb)
-                sink_pad.set_blocked_async(True, block_pad_cb)
+                block_pad(src_pad)
+                block_pad(sink_pad)
 
 def unlink_pads(src, sink):
     src = src.get_data("pad").get_parent_element()
     sink = sink.get_data("pad").get_parent_element()
     src.unlink(sink)
+
+## Pad-Related Functions
+
+blocked_pads = []
+
+def block_pad(pad):
+    pad.set_blocked_async(True, block_pad_cb)
+
+def unblock_pad(pad):
+    pad.set_blocked_async(False, block_pad_cb)
+
+def unblock_all_pads():
+    global blocked_pads
+    for pad in blocked_pads:
+        unblock_pad(pad)
+
+def block_pad_cb(pad, state):
+    global blocked_pads
+    def inner(pad, state):
+        widget = pad.get_data("box")
+        if state:
+            print "blocking pad: %r" % pad
+            color = "blocked_color" 
+            blocked_pads.append(pad)
+        else:
+            color = "normal_color"
+            print "unblocking pad: %r" % pad
+            blocked_pads.remove(pad)
+        widget.props.fill_color_rgba = widget.get_data(color)
+        return False
+    gobject.idle_add(inner, pad, state)
 
 def make_template_widget(canvas, pad, parent):
     def enter(item, target, event):
@@ -387,8 +321,8 @@ def make_pad_widget(canvas, pad, parent):
 
     def unlinked_cb(pad, target):
         src = pad.get_data("box")
-        pad.set_blocked_async(True, block_pad_cb)
-        target.set_blocked_async(True, block_pad_cb)
+        block_pad(pad)
+        block_pad(target)
         gobject.idle_add(unlink_objects, src)
 
     box = make_item(element_pad)
@@ -412,6 +346,87 @@ def make_pad_widget(canvas, pad, parent):
     text.props.text = pad.get_name()
     make_linkable(canvas, box, link_pads, unlink_pads)
     return ret
+
+## Property Editor
+
+def str_widget(prop):
+    return (gtk.Entry(), "changed", gtk.Entry.get_text, 
+        gtk.Entry.set_text)
+
+def num_widget(prop):
+    ret = (gtk.HScale(), "value-changed", gtk.HScale.get_value,
+        gtk.HScale.set_value)
+    minimum = float("-Infinity")
+    maximum = float("Infinity")
+    if hasattr(prop, "minimum"):
+        minimum = prop.minimum
+    if hasattr(prop, "maximum"):
+        maximum = prop.maximum
+    ret[0].set_range(minimum, maximum)
+    return ret
+
+def choice_widget(prop):
+    if hasattr(prop, "_getChoices"):
+        return (gtk.ComboBox(prop._getChoices()), "changed",
+            gtk.ComboBox.get_active, gtk.ComboBox.set_active)
+    else:
+        return str_widget(prop)
+
+def bool_widget(prop):
+    return (gtk.CheckButton(), "toggled", gtk.CheckButton.get_active,
+        gtk.CheckButton.set_active)
+
+def file_widget(prop):
+    return (gtk.FileChooserButton("File"), "selection-changed", 
+        gtk.FileChooserButton.get_filename,
+            gtk.FileChooserButton.set_filename)
+
+def method_widget(prop):
+    ret = gtk.combo_box_new_text()
+    for m in ["solid", "green", "blue", "custom"]:
+        ret.append_text(m)
+    return (ret, "changed", gtk.ComboBox.get_active, 
+        gtk.ComboBox.set_active)
+
+def pattern_widget(prop):
+    ret = gtk.combo_box_new_text()
+    for m in ["smpte", "snow", "black", "white", "red", "green", "blue",
+        "checkers-1", "checkers-2", "checkers-4", "checkers-8",
+        "circular", "blink"]:
+        ret.append_text(m)
+    return (ret, "changed", gtk.ComboBox.get_active, 
+        gtk.ComboBox.set_active)
+
+name_widgets = {
+    "location" : file_widget,
+    "method" : method_widget,
+    "pattern" : pattern_widget,
+}
+
+prop_widgets = {
+    gobject.TYPE_STRING : str_widget,
+    gobject.TYPE_DOUBLE : num_widget,
+    gobject.TYPE_FLOAT : num_widget,
+    gobject.TYPE_ENUM : choice_widget,
+    gobject.TYPE_INT : num_widget,
+    gobject.TYPE_UINT : num_widget,
+    gobject.TYPE_LONG : num_widget,
+    gobject.TYPE_ULONG : num_widget,
+    gobject.TYPE_BOOLEAN : bool_widget,
+}
+
+def widget_lookup(prop):
+    if name_widgets.has_key(prop.name):
+        return name_widgets[prop.name](prop)
+    elif prop_widgets.has_key(prop.value_type):
+        return prop_widgets[prop.value_type](prop)
+    elif hasattr(prop, "enum_class"):
+        return choice_widget(prop)
+    elif hasattr(prop, "minimum") or hasattr(prop, "maximum"):
+        return num_widget(prop)
+    #pick a random signal here, because we need to connect to something
+    return (gtk.Label("Unsupported"), "copy-clipboard", null_func,
+        null_func)
 
 def make_property_editor():
     def make_prop_widget(prop, elements):
@@ -460,14 +475,7 @@ def make_property_editor():
 
     return x, update
 
-def block_pad_cb(pad, state):
-    def inner(pad, state):
-        print "blocking pad: %r" % pad
-        widget = pad.get_data("box")
-        color = "blocked_color" if state else "normal_color"
-        widget.props.fill_color_rgba = widget.get_data(color)
-        return False
-    gobject.idle_add(inner, pad, state)
+## Element-Related Functions
 
 def make_element_widget(canvas, element):
     def add_pad_widget(pad_widget):
@@ -479,7 +487,7 @@ def make_element_widget(canvas, element):
 
     def show_pad(pad):
         w = make_pad_widget(canvas, pad, element)
-        pad.set_blocked_async(True, block_pad_cb)
+        block_pad(pad)
         add_pad_widget(w)
         return False
 
@@ -525,6 +533,8 @@ def make_element_widget(canvas, element):
     element.set_data("widget", ret)
     return ret
 
+## Main Editor Canvas
+
 def make_canvas(pipeline, sel_changed_cb):
     def element_added(bin, element):
         x, y = coords[element]
@@ -538,6 +548,7 @@ def make_canvas(pipeline, sel_changed_cb):
 
     def add_element(element, x, y):
         el = gst.element_factory_make(element)
+        el.set_state(pipeline.get_state()[1])
         coords[el] = (x, y)
         pipeline.add(el)
         return True
@@ -556,7 +567,7 @@ def make_canvas(pipeline, sel_changed_cb):
 
     def drag_data_received(w, context, x, y, data, info, time):
         context.finish(True, False, time)
-        add_element(data.data, *pixel_coords(canvas, (x, y)))
+        add_element(data.data, *canvas.convert_from_pixels(x, y))
 
     def sel_cb(selected, deselected):
         for obj in selected:
@@ -582,6 +593,8 @@ def make_canvas(pipeline, sel_changed_cb):
         ("Delete", remove_element, ()),
         ("Duplicate", dup_element, ()),
     )
+
+## Element Browser
 
 def make_browser():
     def get_data(w, context, s_d, info, time):
@@ -614,6 +627,8 @@ gst_states = (
     (gst.STATE_PLAYING, "Playing")
 )
 
+## Button Toolbar
+
 def make_buttons(pipeline, commands):
     def button(label, callback, data):
         ret = gtk.Button(label)
@@ -630,6 +645,7 @@ def make_buttons(pipeline, commands):
         return True
     
     def null_cb(button):
+        unblock_all_pads()
         set_state(None, gst.STATE_NULL)
         for b in buttons.values():
             b.set_sensitive(True)
@@ -665,6 +681,8 @@ def make_buttons(pipeline, commands):
     bus.add_signal_watch()
     bus.connect("message", message_handler)
     return box
+
+## Top Level Constructor
 
 def editor(pipeline):
     props, update = make_property_editor()
