@@ -1,4 +1,4 @@
-from pitivi.receiver import receiver, handler
+from receiver import receiver, handler
 from point import Point
 import gtk
 
