@@ -120,7 +120,8 @@ class Controller(object):
         pass
 
     def set_pos(self, obj, pos):
-        obj.props.x, obj.props.y = pos
+        x, y = pos
+        self._view.set_simple_transform(x, y, 1.0, 0.0)
 
     def transform(self, pos):
         return pos

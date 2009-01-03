@@ -1,4 +1,4 @@
-from pitivi.receiver import receiver, handler
+from receiver import receiver, handler
 import controller
 
 class View(object):
