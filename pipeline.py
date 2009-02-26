@@ -3,12 +3,19 @@ import goocanvas
 from receiver import receiver, handler
 from element import ElementView
 
+ui = """
+<ui>
+    <toolbar name="MainToolBar">
+    </toolbar>
+</ui>
+"""
+
 class PipelineView(goocanvas.Canvas):
 
     widgets = None
     selected = None
 
-    def __init__(self, pipeline):
+    def __init__(self, pipeline, m):
         goocanvas.Canvas.__init__(self)
         self.pipeline = pipeline
         self.widgets = {}
