@@ -134,6 +134,15 @@ class RequestTemplateView(PadTemplateView):
 
     __COLOR__ = "blue"
 
+    class Controller(controller.Controller):
+
+        def click(self, pos):
+            self._view.props.parent.element.get_pad(
+                self._view.pad.name_template)
+
+        def set_pos(self, obj, pos):
+            pass
+
     def canLink(self, other):
         return False
 

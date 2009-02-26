@@ -1,3 +1,4 @@
+import gobject
 import goocanvas
 import controller
 import view
@@ -61,14 +62,14 @@ class ElementView(view.View, goocanvas.Group):
         # this handler is called in pipeline context, and we need to add the
         # pad in the UI context
         print pad.get_name(), pad.get_direction(), pad
-        gobject.idle_add(self.__show_pad, pad)
+        gobject.idle_add(self.__addPad, pad)
 
     @handler(element, "pad-removed")
     def __padRemoved(self, element, pad):
         print pad.get_name(), pad.get_direction(), pad
         # this handler is called in pipeline context, and we need to add the
         # pad in the UI context
-        gobject.idle_add(self.__hide_pad, pad)
+        gobject.idle_add(self.__removePad, pad)
 
 ## implementation functions
 
@@ -107,5 +108,5 @@ class ElementView(view.View, goocanvas.Group):
         self.add_child(child)
         self.__update()
 
-    def __hide_pad(self, pad):
+    def __removePad(self, pad):
         self.__update()
