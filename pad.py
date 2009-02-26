@@ -24,6 +24,7 @@ class PadBaseView(view.View, goocanvas.Group):
             self._canvas.get_root_item().add_child(self.arrow)
             self.__center = self.center(self._view.socket)
             points = [self.__center, self.__center]
+            self._mousedown = Point(0, 0)
             self.arrow.props.points = goocanvas.Points(points)
 
         def drag_end(self):
@@ -41,7 +42,7 @@ class PadBaseView(view.View, goocanvas.Group):
 
     def __createUi(self):
         self.text = goocanvas.Text(
-            font = "Sans 8",
+            font = "Sans 7",
             parent = self,
             text = self.name())
 

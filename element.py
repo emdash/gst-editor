@@ -31,7 +31,7 @@ class ElementView(view.View, goocanvas.Group):
 
         self.text = goocanvas.Text(
             parent = self,
-            font = "Sans 9 Bold",
+            font = "Sans 8 Bold",
             text = element.get_name())
 
         self.__sourcePads = {}
