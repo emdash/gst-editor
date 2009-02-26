@@ -4,41 +4,86 @@ import goocanvas
 import controller
 import view
 import gtk
+import utils
+from point import Point
 
-class PadBaseView(view.View, goocanvas.Rect):
+class PadBaseView(view.View, goocanvas.Group):
 
-    __COLOR__ = "yellow"
-    __INACTIVE__ = "black"
-    __ACTIVE__ = "red"
-    __BLOCKED__ = "yellow"
+    spacing = 3
 
     class Controller(controller.Controller):
 
         __ARROW_COLOR__ = "red"
 
         arrow = goocanvas.Polyline(
-            stroke_color = __ARROW_COLOR__,
-            end_arrow = "true")
+            stroke_color = __ARROW_COLOR__)
+
+        __center = None
 
         def drag_start(self):
-            pass
+            self._canvas.get_root_item().add_child(self.arrow)
+            self.__center = self.center(self._view.socket)
+            points = [self.__center, self.__center]
+            self.arrow.props.points = goocanvas.Points(points)
 
         def drag_end(self):
-            pass
+            self.arrow.remove()
+
+        def set_pos(self, obj, pos):
+            points = [self.__center, pos]
+            self.arrow.props.points = goocanvas.Points(points)
 
     def __init__(self, pad):
-        goocanvas.Rect.__init__(self,
+        self.pad = pad
+        goocanvas.Group.__init__(self)
+        view.View.__init__(self)
+        self.__createUi()
+
+    def __createUi(self):
+        self.text = goocanvas.Text(
+            font = "Sans 8",
+            parent = self,
+            text = self.name())
+
+        self.socket = goocanvas.Rect(
+            parent = self,
             width = 10,
             height = 10,
             fill_color = self.__COLOR__)
-        view.View.__init__(self)
-        self.pad = pad
 
-class PadView(PadBaseView, goocanvas.Group):
+        twidth, theight = utils.get_text_dimensions(self.text)
+        self.width = self.spacing + self.socket.props.width + twidth
+        self.height = max(self.socket.props.height, theight)
+
+        if self.direction() == gst.PAD_SRC:
+            self.socket.props.x = self.width - self.socket.props.width
+        else:
+            self.text.props.x = self.socket.props.width + self.spacing
+
+    def name(self):
+        raise NotImplementedError
+
+    def direction(self):
+        raise NotImplementedError
+
+    def canLink(self, other):
+        raise NotImplementedError
+
+class PadView(PadBaseView):
+
+    __COLOR__ = "yellow"
 
     def __init__(self, pad):
         PadBaseView.__init__(self, pad)
-        self.block()
+
+    def direction(self):
+        return self.pad.get_direction()
+
+    def name(self):
+        return self.pad.get_name()
+
+    def canLink(self, other):
+        return isinstance(other, gst.PadView)
 
 ## pad signal handlers
 
@@ -76,26 +121,27 @@ class PadView(PadBaseView, goocanvas.Group):
         # tasks in the main context
         gobject.idle_add(self.__finish_pad_blocking, state)
 
-class RequestTemplateView(PadBaseView):
+class PadTemplateView(PadBaseView):
+
+    def name(self):
+        return self.pad.name_template
+
+    def direction(self):
+        return self.pad.direction
+
+class RequestTemplateView(PadTemplateView):
 
     __COLOR__ = "blue"
 
-    class Controller(controller.Controller):
+    def canLink(self, other):
+        return False
 
-        def click(self):
-            pass
-
-class SometimesTemplateView(PadView):
+class SometimesTemplateView(PadTemplateView):
 
     __COLOR__ = "green"
 
-    class Controller(controller.Controller):
-
-        def click(self):
-            pass
-
 def make_pad_view(pad):
-    if type(pad) == gst.Pad:
+    if isinstance(pad, gst.Pad):
         return PadView(pad)
     elif pad.presence == gst.PAD_REQUEST:
         return RequestTemplateView(pad)

@@ -43,6 +43,13 @@ class Controller(object):
         bounds = item.get_bounds()
         return Point(bounds.x1, bounds.y1)
 
+    def size(self, item):
+        bounds = item.get_bounds()
+        return Point(bounds.x2, bounds.y2) - Point(bounds.x1, bounds.y1)
+
+    def center(self, item):
+        return self.pos(item) + self.size(item) // 2
+
 ## signal handlers
 
     @handler(_view, "enter_notify_event")

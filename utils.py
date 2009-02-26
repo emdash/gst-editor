@@ -23,6 +23,7 @@ import gobject
 gobject.threads_init()
 import goocanvas
 import gtk
+import pango
 
 ## GTK Conveinence Functions
 
@@ -65,3 +66,7 @@ vbox = container_helper(gtk.VBox)
 vpane = widget_helper(gtk.VPaned)
 hpane = widget_helper(gtk.HPaned)
 
+def get_text_dimensions(text):
+    ink, logical = text.get_natural_extents()
+    x1, y1, x2, y2 = [pango.PIXELS(x) for x in logical]
+    return x2 - x1, y2 - y1

@@ -7,7 +7,7 @@ import gtk
 import os.path
 import gst
 from utils import hpane, vpane, scrolled, viewport, vbox
-from pipeline import PipelineView
+from bin import BinView
 from property_editor import PropertyEditor
 from browser import Browser
 from gettext import gettext as _
@@ -40,6 +40,10 @@ ui = """
         </menu>
     </menubar>
     <toolbar name="MainToolBar">
+        <toolitem action="Null" />
+        <toolitem action="Ready" />
+        <toolitem action="Pause" />
+        <toolitem action="Play" />
     </toolbar>
 </ui>
 """
@@ -63,22 +67,25 @@ class GSTEditor(gtk.Window):
                 ),
                 (
                     hpane(
-                        scrolled(
-                            viewport(
-                                PropertyEditor()
-                            )
+                        vpane(
+                            scrolled(
+                                viewport(
+                                    PropertyEditor()
+                                )
+                            ),
+                            Browser(),
                         ),
                         scrolled(
-                            PipelineView(self.pipeline, m)
+                            BinView(self.pipeline, m)
                         )
                     ), 
-                    "start",
+                    "end",
                     True, 
                     True,
                 ),
                 (
                     m.get_widget("/MainToolBar"),
-                    "end",
+                    "start",
                     False,
                     False,
                 ),
@@ -109,6 +116,13 @@ class GSTEditor(gtk.Window):
             ("Edit", None, _("_Edit")),
             ("Help", None, _("_Help")),
             ("View", None, _("_View")),
+        ))
+        actiongroup.add_toggle_actions((
+            ("Null", gtk.STOCK_MEDIA_STOP, _("Null"), None, None, self.nullState),
+            ("Ready", gtk.STOCK_YES, _("Ready"), None, None, self.readyState),
+            ("Pause", gtk.STOCK_MEDIA_PAUSE, None, None, None, self.pausedState),
+            ("Play", gtk.STOCK_MEDIA_PLAY, None, None, None,
+                self.playingState),
         ))
         m.insert_action_group(actiongroup)
         m.add_ui_from_string(ui)
@@ -150,6 +164,18 @@ class GSTEditor(gtk.Window):
         pass
 
     def about(self, action):
+        pass
+
+    def nullState(self, action):
+        pass
+
+    def readyState(self, action):
+        pass
+
+    def pausedState(self, action):
+        pass
+
+    def playingState(self, action):
         pass
 
 if __name__ == "__main__":
