@@ -18,8 +18,9 @@ class Browser(gtk.ScrolledWindow):
     def __createUi(self):
 
         def get_data(w, context, s_d, info, time):
-            row = w.get_cursor()[0][0]
-            s_d.set(s_d.target, 8, treemodel[row][1])
+            model, rows = treeview.get_selection().get_selected_rows()
+            uris = '\n'.join((model[path][1] for path in rows))
+            s_d.set(s_d.target, 8, uris)
 
         # get list of all elements
         registry = gst.registry_get_default()
@@ -32,6 +33,7 @@ class Browser(gtk.ScrolledWindow):
             treemodel.append(None, [item, item.get_name()])
         treeview = gtk.TreeView()
         treeview.set_model(treemodel)
+        treeview.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
         renderer = gtk.CellRendererText()
         column = gtk.TreeViewColumn("Element", renderer, text=1)
         treeview.append_column(column)

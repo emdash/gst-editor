@@ -73,9 +73,11 @@ class PadBaseView(view.View, goocanvas.Group):
 class PadView(PadBaseView):
 
     __COLOR__ = "yellow"
+    __BLOCKED__ = "dark yellow"
 
     def __init__(self, pad):
         PadBaseView.__init__(self, pad)
+        self.block()
 
     def direction(self):
         return self.pad.get_direction()
@@ -111,9 +113,9 @@ class PadView(PadBaseView):
     def __finish_pad_blocking(self, blocked):
         if blocked:
             self.blocked_pads.append(self)
-            self.props.fill_color = self.__BLOCKED__
+            self.socket.props.fill_color = self.__BLOCKED__
         else:
-            self.props.fill_color = self.__NORMAL__
+            self.socket.props.fill_color = self.__NORMAL__
             self.blocked_pads.remove(self)
         return False
 

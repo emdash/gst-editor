@@ -73,8 +73,6 @@ class ElementView(view.View, goocanvas.Group):
 
 ## implementation functions
 
-    __cur_row = 0
-
     def __sizepads(self, pads):
         width = 0
         height = 0

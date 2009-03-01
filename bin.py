@@ -1,13 +1,25 @@
 import os
 import gst
 import gtk
+from gettext import gettext as _
 import goocanvas
 from receiver import receiver, handler
 from element import ElementView
 
 ui = """
 <ui>
+    <menubar name="MainMenuBar">
+        <placeholder name="BinMenus">
+            <menu action="Bin">
+                <menuitem action="AddFile" />
+            </menu>
+        </placeholder>
+    </menubar>
     <toolbar name="MainToolBar">
+        <placeholder name="BinActions">
+            <toolitem action="AddFile" />
+            <toolitem action="Delete" />
+        </placeholder>
     </toolbar>
 </ui>
 """
@@ -40,25 +52,53 @@ class BinView(goocanvas.Canvas):
         self.props.automatic_bounds = True
         self.pipeline = pipeline
         self.widgets = {}
-        self.selected = set()
         self.drag_dest_set(gtk.DEST_DEFAULT_ALL, target,
             gtk.gdk.ACTION_COPY)
         self.connect("drag_data_received", self.__dragDataReceived)
+        self.selected = set()
+        self.__setupActions(m)
+
+    def __setupActions(self, m):
+        actiongroup = gtk.ActionGroup("binview")
+        actiongroup.add_actions((
+            ("AddFile", gtk.STOCK_ADD, _("Add Filesrc"), None, None,
+                self.addFileAction),
+            ("Delete", gtk.STOCK_DELETE, None, None, None,
+                self.deleteSelectionAction),
+            ("Bin", None, _("_Bin")),
+        ))
+        m.insert_action_group(actiongroup)
+        m.add_ui_from_string(ui)
 
     def __dragDataReceived(self, w, context, x, y, selection, targetType, time):
         if targetType == TYPE_GST_ELEMENT:
-            element = gst.element_factory_make(selection.data)
+            elements = selection.data.split('\n')
+            for factory in elements:
+                element = gst.element_factory_make(factory)
+                self.addElement(element, x, y)
+                x += 10; y += 10
         elif targetType == TYPE_TEXT_PLAIN:
-            incoming = selection.data.strip()
-            if isfile(incoming):
-                element = gst.element_factory_make("filesrc",
-                    os.path.basename(incoming))
-                element.props.location = incoming
-        self.addElement(element, *self.convert_from_pixels(x, y))
+            incoming = [uri.strip() for uri in selection.data.split('\n')]
+            for uri in incoming:
+                if isfile(uri):
+                    self.addFile(uri, *self.convert_from_pixels(x, y))
+                    x += 10; y += 10
+
+    def addFileAction(self, action):
+        pass
+
+    def addFile(self, uri, x=100, y=100):
+        element = gst.element_factory_make("filesrc", 
+            os.path.basename(uri))
+        element.props.location = uri 
+        self.addElement(element, x, y)
 
     def addElement(self, element, x, y):
         element.set_data("pos", (x, y))
         self.pipeline.add(element)
+
+    def deleteSelectionAction(self):
+        pass
 
     pipeline = receiver()
 

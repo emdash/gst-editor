@@ -31,6 +31,7 @@ ui = """
             <separator />
             <menuitem action="Preferences" />
         </menu>
+        <placeholder name="BinMenus" />
         <menu action="View" >
             <menuitem action="ZoomIn" />
             <menuitem action="ZoomOut" />
@@ -40,6 +41,8 @@ ui = """
         </menu>
     </menubar>
     <toolbar name="MainToolBar">
+        <placeholder name="BinActions" />
+        <separator />
         <toolitem action="Null" />
         <toolitem action="Ready" />
         <toolitem action="Pause" />
