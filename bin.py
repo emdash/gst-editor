@@ -85,7 +85,28 @@ class BinView(goocanvas.Canvas):
                     x += 10; y += 10
 
     def addFileAction(self, action):
-        pass
+
+        def respondCb(dialog, response):
+            if response == gtk.RESPONSE_OK:
+                x, y = 100, 100
+                for file in dialog.get_uris():
+                    self.addFile(file, x, y)
+                    x += 10; y += 10
+            dialog.destroy()
+
+        chooser = gtk.FileChooserDialog(_("Add Filesrc to Pipeline"), 
+            None,
+            gtk.FILE_CHOOSER_ACTION_OPEN,
+            (gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE, gtk.STOCK_ADD, 
+                gtk.RESPONSE_OK))
+
+        chooser.set_default_response(gtk.RESPONSE_OK)
+        chooser.set_select_multiple(True)
+        chooser.set_modal(False)
+        # TODO: remember last folder and set path to that
+        chooser.set_current_folder(os.path.expanduser("~"))
+        chooser.connect('response', respondCb)
+        chooser.show()
 
     def addFile(self, uri, x=100, y=100):
         element = gst.element_factory_make("filesrc", 

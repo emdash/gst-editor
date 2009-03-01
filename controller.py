@@ -50,6 +50,10 @@ class Controller(object):
     def center(self, item):
         return self.pos(item) + self.size(item) // 2
 
+    def last_xy(self):
+        return self.transform(self._mousedown + self.from_event(
+            self._last_event))
+
 ## signal handlers
 
     @handler(_view, "enter_notify_event")

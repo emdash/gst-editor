@@ -11,6 +11,8 @@ class PadBaseView(view.View, goocanvas.Group):
 
     spacing = 3
 
+    __OUTLINE__ = "black"
+
     class Controller(controller.Controller):
 
         __ARROW_COLOR__ = "red"
@@ -19,6 +21,13 @@ class PadBaseView(view.View, goocanvas.Group):
             stroke_color = __ARROW_COLOR__)
 
         __center = None
+        __prev_pads = []
+
+        def enter(self, item, target):
+            self._view.focus()
+
+        def leave(self, item, target):
+            self._view.unfocus()
 
         def drag_start(self):
             self._canvas.get_root_item().add_child(self.arrow)
@@ -29,10 +38,27 @@ class PadBaseView(view.View, goocanvas.Group):
 
         def drag_end(self):
             self.arrow.remove()
+            for f in self.__prev_pads:
+                pad.unhilight()
+
+        def __pads_under_point(self, (x, y)):
+            items = self._canvas.get_items_in_area(
+                goocanvas.Bounds(x - 1, y - 1, x + 1, y + 1), True, True, True)
+            if items:
+                return [item for item in items if isinstance(
+                    item, PadBaseView)]
+            return []
 
         def set_pos(self, obj, pos):
             points = [self.__center, pos]
             self.arrow.props.points = goocanvas.Points(points)
+            for pad in self.__prev_pads:
+                pad.unhilight()
+            self.__prev_pads = self.__pads_under_point(pos)
+            for pad in self.__prev_pads:
+                if pad.canLink(self._view):
+                    pad.hilight()
+
 
     def __init__(self, pad):
         self.pad = pad
@@ -50,7 +76,8 @@ class PadBaseView(view.View, goocanvas.Group):
             parent = self,
             width = 10,
             height = 10,
-            fill_color = self.__COLOR__)
+            fill_color = self.__COLOR__,
+            stroke_color = self.__OUTLINE__)
 
         twidth, theight = utils.get_text_dimensions(self.text)
         self.width = self.spacing + self.socket.props.width + twidth
@@ -70,13 +97,28 @@ class PadBaseView(view.View, goocanvas.Group):
     def canLink(self, other):
         raise NotImplementedError
 
+    def hilight(self):
+        self.socket.props.fill_color = self.__HILIGHT__
+
+    def unhilight(self):
+        self.socket.props.fill_color = self.__COLOR__
+
+    def focus(self):
+        self.socket.props.stroke_color = self.__FOCUS__
+
+    def unfocus(self):
+        self.socket.props.stroke_color = self.__OUTLINE__
+
 class PadView(PadBaseView):
 
     __COLOR__ = "yellow"
     __BLOCKED__ = "dark yellow"
+    __HILIGHT__ = "red"
+    __FOCUS__ = "red"
 
     def __init__(self, pad):
         PadBaseView.__init__(self, pad)
+        self.pad = pad
         self.block()
 
     def direction(self):
@@ -86,15 +128,9 @@ class PadView(PadBaseView):
         return self.pad.get_name()
 
     def canLink(self, other):
-        return isinstance(other, gst.PadView)
-
-## pad signal handlers
-
-    pad = receiver()
-    # yes, we wan't this to be a static list
-    blocked_pads = []
-
-## implementation
+        return (isinstance(other, PadView) and
+            (self.pad.can_link(other.pad) or
+            other.pad.can_link(self.pad)))
 
     @classmethod
     def unblock_all_pads(cls):
@@ -123,6 +159,12 @@ class PadView(PadBaseView):
         # this callback is called from pipeline context, and we need to do UI
         # tasks in the main context
         gobject.idle_add(self.__finish_pad_blocking, state)
+
+## pad signal handlers
+
+    pad = receiver()
+    # yes, we wan't this to be a static list
+    blocked_pads = []
 
 class PadTemplateView(PadBaseView):
 
