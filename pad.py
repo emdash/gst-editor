@@ -12,6 +12,8 @@ class PadBaseView(view.View, goocanvas.Group):
     spacing = 3
 
     __OUTLINE__ = "black"
+    __FOCUS__ = "red"
+    __HILIGHT__ = "black"
 
     class Controller(controller.Controller):
 
@@ -113,8 +115,6 @@ class PadView(PadBaseView):
 
     __COLOR__ = "yellow"
     __BLOCKED__ = "dark yellow"
-    __HILIGHT__ = "red"
-    __FOCUS__ = "red"
 
     def __init__(self, pad):
         PadBaseView.__init__(self, pad)
@@ -193,6 +193,9 @@ class RequestTemplateView(PadTemplateView):
 class SometimesTemplateView(PadTemplateView):
 
     __COLOR__ = "green"
+
+    def canLink(self, other):
+        return False
 
 def make_pad_view(pad):
     if isinstance(pad, gst.Pad):
