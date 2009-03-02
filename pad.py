@@ -6,6 +6,7 @@ import view
 import gtk
 import utils
 from point import Point
+from link import Link
 
 class PadBaseView(view.View, goocanvas.Group):
 
@@ -40,8 +41,10 @@ class PadBaseView(view.View, goocanvas.Group):
 
         def drag_end(self):
             self.arrow.remove()
-            for f in self.__prev_pads:
+            for pad in self.__prev_pads:
                 pad.unhilight()
+                if pad.canLink(self._view):
+                    pad.linkPads(self._view)
 
         def __pads_under_point(self, (x, y)):
             items = self._canvas.get_items_in_area(
@@ -62,11 +65,13 @@ class PadBaseView(view.View, goocanvas.Group):
                     pad.hilight()
 
 
-    def __init__(self, pad):
+    def __init__(self, pad, element):
         self.pad = pad
+        self.element = element
         goocanvas.Group.__init__(self)
         view.View.__init__(self)
         self.__createUi()
+        self.links = []
 
     def __createUi(self):
         self.text = goocanvas.Text(
@@ -99,6 +104,19 @@ class PadBaseView(view.View, goocanvas.Group):
     def canLink(self, other):
         raise NotImplementedError
 
+    def linkPads(self, other):
+        if self.direction() == gst.PAD_SRC:
+            link = Link(self, other)
+        else:
+            link = Link(other, self)
+        self.links.append(link)
+        other.links.append(link)
+        self.get_canvas().get_root_item().add_child(link)
+
+    def updateLinks(self):
+        for link in self.links:
+            link.updateEndpoints()
+
     def hilight(self):
         self.socket.props.fill_color = self.__HILIGHT__
 
@@ -116,9 +134,8 @@ class PadView(PadBaseView):
     __COLOR__ = "yellow"
     __BLOCKED__ = "dark yellow"
 
-    def __init__(self, pad):
-        PadBaseView.__init__(self, pad)
-        self.pad = pad
+    def __init__(self, *args, **kwargs):
+        PadBaseView.__init__(self, *args, **kwargs)
         self.block()
 
     def direction(self):
@@ -128,17 +145,16 @@ class PadView(PadBaseView):
         return self.pad.get_name()
 
     def canLink(self, other):
-        return (isinstance(other, PadView) and
-            (self.pad.can_link(other.pad) or
-            other.pad.can_link(self.pad)))
+        return ((not self.pad.is_linked()) and isinstance(other, PadView) and
+            (self.pad.can_link(other.pad) or other.pad.can_link(self.pad)))
+
+    # yes, we wan't this to be a static list
+    blocked_pads = []
 
     @classmethod
     def unblock_all_pads(cls):
         for pad in cls.blocked_pads:
             pad.unblock()
-
-    def link_pads(self, target):
-        pass
 
     def block(self):
         self.pad.set_blocked_async(True, self.__block_cb)
@@ -159,12 +175,6 @@ class PadView(PadBaseView):
         # this callback is called from pipeline context, and we need to do UI
         # tasks in the main context
         gobject.idle_add(self.__finish_pad_blocking, state)
-
-## pad signal handlers
-
-    pad = receiver()
-    # yes, we wan't this to be a static list
-    blocked_pads = []
 
 class PadTemplateView(PadBaseView):
 
@@ -197,12 +207,18 @@ class SometimesTemplateView(PadTemplateView):
     def canLink(self, other):
         return False
 
-def make_pad_view(pad):
+    def linkSrc(self, other):
+        pass
+
+    def linkSink(self, other):
+        pass
+
+def make_pad_view(pad, element):
     if isinstance(pad, gst.Pad):
-        return PadView(pad)
+        return PadView(pad, element)
     elif pad.presence == gst.PAD_REQUEST:
-        return RequestTemplateView(pad)
+        return RequestTemplateView(pad, element)
     elif pad.presence == gst.PAD_SOMETIMES:
-        return SometimesTemplateView(pad)
+        return SometimesTemplateView(pad, element)
     return None
 

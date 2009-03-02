@@ -37,6 +37,7 @@ class ElementView(view.View, goocanvas.Group):
 
         self.__sourcePads = {}
         self.__sinkPads = {}
+        self.__links = {}
 
         for pad in element.get_pad_template_list():
             if pad.presence != gst.PAD_ALWAYS:
@@ -44,6 +45,21 @@ class ElementView(view.View, goocanvas.Group):
 
         for pad in element.pads():
             self.__addPad(pad)
+
+## public api
+
+    def joinLink(self, pad, linkObj):
+        self.__links[pad] = pad.direction()
+    
+    def breakLink(self, pad):
+        del self.__links[pad]
+
+    def set_simple_transform(self, x, y, scale, rotation):
+        goocanvas.Group.set_simple_transform(self, x, y, scale, rotation)
+        for pad in self.__sourcePads.values():
+            pad.updateLinks()
+        for pad in self.__sinkPads.values():
+            pad.updateLinks()
 
 ## view methods
 
@@ -98,7 +114,7 @@ class ElementView(view.View, goocanvas.Group):
         self.__pospads(self.__sourcePads, width - rwidth, theight)
 
     def __addPad(self, pad):
-        child = make_pad_view(pad)
+        child = make_pad_view(pad, self)
         if child.direction() == gst.PAD_SRC:
             self.__sourcePads[pad] = child
         else:
