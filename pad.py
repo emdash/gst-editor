@@ -114,6 +114,11 @@ class PadBaseView(view.View, goocanvas.Group):
         self.links.append(link)
         other.links.append(link)
         self.get_canvas().get_root_item().add_child(link)
+        self.updateLinks()
+        other.updateLinks()
+
+    def unlink(self, link):
+        self.links.remove(link)
 
     def updateLinks(self):
         for link in self.links:
@@ -149,6 +154,10 @@ class PadView(PadBaseView):
     def canLink(self, other):
         return ((not self.pad.is_linked()) and isinstance(other, PadView) and
             (self.pad.can_link(other.pad) or other.pad.can_link(self.pad)))
+
+    def unlink(self, link):
+        PadBaseView.unlink(self, link)
+        self.block()
 
     # yes, we wan't this to be a static list
     blocked_pads = []

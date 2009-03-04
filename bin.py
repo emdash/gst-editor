@@ -112,7 +112,7 @@ class BinView(goocanvas.Canvas):
     def addFile(self, uri, x=100, y=100):
         element = gst.element_factory_make("filesrc", 
             os.path.basename(uri))
-        element.props.location = uri 
+        element.props.location = gst.uri_get_location(uri)
         self.addElement(element, x, y)
 
     def addElement(self, element, x, y):

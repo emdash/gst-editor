@@ -51,7 +51,15 @@ class Link(selectable.Selectable, goocanvas.Polyline):
         self.props.stroke_color = "black"
 
     def delete(self):
-        pass
+        if not (self.srclinked or self.sinklinked):
+            self._unlink()
+
+    def _unlink(self):
+        self.src.unlink(self)
+        self.sink.unlink(self)
+        self.src = None
+        self.sink = None
+        self.remove()
 
     def set_pos(self, pos):
         pass
