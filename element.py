@@ -2,27 +2,25 @@ import gobject
 import goocanvas
 import controller
 import view
+import selectable
 import gtk
 import gst
 import utils
+import weakref
 from pad import make_pad_view
 from receiver import receiver, handler
 
-class ElementView(view.View, goocanvas.Group):
+class ElementView(selectable.Selectable, goocanvas.Group):
 
     __NORMAL__ = 0x709fb899
     __SELECTED__ = 0xa6cee3AA
 
     padding = 2
 
-    class Controller(controller.Controller):
-
-        def click(self, pos):
-            self._view.select()
-
-    def __init__(self, element):
+    def __init__(self, element, selection):
         goocanvas.Group.__init__(self)
-        view.View.__init__(self)
+        selectable.Selectable.__init__(self, selection)
+        self.register_instance(self)
         self.element = element
         self.bg = goocanvas.Rect(
             parent = self,
@@ -66,7 +64,7 @@ class ElementView(view.View, goocanvas.Group):
     def select(self):
         self.bg.props.stroke_color = "red"
 
-    def normal(self):
+    def deselect(self):
         self.bg.props.stroke_color = "black"
 
     element = receiver()
@@ -124,3 +122,21 @@ class ElementView(view.View, goocanvas.Group):
 
     def __removePad(self, pad):
         self.__update()
+
+## class methods
+
+    __instances__ = []
+
+    @classmethod
+    def register_instance(cls, instance):
+        cls.__instances__.append(weakref.proxy(instance,
+            cls.unregister_instance))
+
+    @classmethod
+    def unregister_instance(cls, proxy):
+        self.__instances__.remove(proxy)
+
+    @classmethod
+    def set_all_to_null(cls):
+        for instance in cls.__instances__:
+            instance.element.set_state(gst.STATE_NULL)

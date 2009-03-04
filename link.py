@@ -56,6 +56,7 @@ class Link(view.View, goocanvas.Polyline):
             self.updateEndpoints()
         else:
             self.props.visibility = goocanvas.ITEM_INVISIBLE
+        return False
 
     srcpad = receiver()
     sinkpad = receiver()

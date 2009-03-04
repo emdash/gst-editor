@@ -5,6 +5,7 @@ from gettext import gettext as _
 import goocanvas
 from receiver import receiver, handler
 from element import ElementView
+import selectable
 
 ui = """
 <ui>
@@ -55,7 +56,7 @@ class BinView(goocanvas.Canvas):
         self.drag_dest_set(gtk.DEST_DEFAULT_ALL, target,
             gtk.gdk.ACTION_COPY)
         self.connect("drag_data_received", self.__dragDataReceived)
-        self.selected = set()
+        self.selection = selectable.Selection()
         self.__setupActions(m)
 
     def __setupActions(self, m):
@@ -125,7 +126,7 @@ class BinView(goocanvas.Canvas):
 
     @handler(pipeline, "element-added")
     def element_added(self, pipeline, element):
-        v = ElementView(element)
+        v = ElementView(element, self.selection)
         self.widgets[element] = v
         x, y = element.get_data("pos")
         v.set_simple_transform(x, y, 1.0, 0)

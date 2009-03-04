@@ -1,6 +1,7 @@
 from receiver import receiver, handler
 import gst
 import goocanvas
+import gobject
 import controller
 import view
 import gtk
@@ -150,6 +151,7 @@ class PadView(PadBaseView):
 
     # yes, we wan't this to be a static list
     blocked_pads = []
+    is_blocked = False
 
     @classmethod
     def unblock_all_pads(cls):
@@ -162,16 +164,23 @@ class PadView(PadBaseView):
     def unblock(self):
         self.pad.set_blocked_async(False, self.__block_cb)
 
+    def unhilight(self):
+        if self.is_blocked:
+            self.socket.props.fill_color_rgba = 0xAAAA00FF
+        else:
+            self.socket.props.fill_color = self.__COLOR__
+
     def __finish_pad_blocking(self, blocked):
         if blocked:
             self.blocked_pads.append(self)
-            self.socket.props.fill_color = self.__BLOCKED__
+            self.is_blocked = True
         else:
-            self.socket.props.fill_color = self.__NORMAL__
             self.blocked_pads.remove(self)
+            self.is_blocked = False
+        self.unhilight()
         return False
 
-    def __block_cb(self, state):
+    def __block_cb(self, pad, state):
         # this callback is called from pipeline context, and we need to do UI
         # tasks in the main context
         gobject.idle_add(self.__finish_pad_blocking, state)

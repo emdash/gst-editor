@@ -8,7 +8,9 @@ import os.path
 import gst
 from utils import hpane, vpane, scrolled, viewport, vbox
 from bin import BinView
+from pad import PadView
 from property_editor import PropertyEditor
+from element import ElementView
 from browser import Browser
 from gettext import gettext as _
 
@@ -124,6 +126,9 @@ class PipelineStateAction(gtk.Action):
         return ret
 
     def clicked(self, button):
+        if self.state == gst.STATE_NULL:
+            PadView.unblock_all_pads()
+            ElementView.set_all_to_null()
         self.pipeline.set_state(self.state)
 
     def deactivateProxies(self):
