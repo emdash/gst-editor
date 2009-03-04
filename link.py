@@ -29,6 +29,7 @@ class Link(selectable.Selectable, goocanvas.Polyline):
         self.props.stroke_color = "black"
         self.props.line_width = 2.0
         self.props.end_arrow = True
+        self.props.pointer_events = 
         self.checkVisibility()
         self.link()
 
@@ -83,7 +84,7 @@ class Link(selectable.Selectable, goocanvas.Polyline):
             self.props.line_dash = goocanvas.LineDash([])
             self.updateEndpoints()
         else:
-            self.props.line_dash = goocanvas.LineDash([1.5, 1.5])
+            self.props.line_dash = goocanvas.LineDash([3.0, 3.0])
         return False
 
     srcpad = receiver()
