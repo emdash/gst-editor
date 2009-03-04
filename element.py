@@ -59,13 +59,18 @@ class ElementView(selectable.Selectable, goocanvas.Group):
         for pad in self.__sinkPads.values():
             pad.updateLinks()
 
-## view methods
+## Selectable Methods methods
 
     def select(self):
         self.bg.props.stroke_color = "red"
 
     def deselect(self):
         self.bg.props.stroke_color = "black"
+
+    def delete(self):
+        p = self.element.get_parent()
+        if p:
+            p.remove(self.element)
 
     element = receiver()
 
@@ -112,7 +117,7 @@ class ElementView(selectable.Selectable, goocanvas.Group):
         self.__pospads(self.__sourcePads, width - rwidth, theight)
 
     def __addPad(self, pad):
-        child = make_pad_view(pad, self)
+        child = make_pad_view(pad, self, self.selection)
         if child.direction() == gst.PAD_SRC:
             self.__sourcePads[pad] = child
         else:

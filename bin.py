@@ -119,8 +119,8 @@ class BinView(goocanvas.Canvas):
         element.set_data("pos", (x, y))
         self.pipeline.add(element)
 
-    def deleteSelectionAction(self):
-        pass
+    def deleteSelectionAction(self, action):
+        self.selection.delete()
 
     pipeline = receiver()
 
@@ -135,5 +135,8 @@ class BinView(goocanvas.Canvas):
     @handler(pipeline, "element-removed")
     def element_removed(self, pipeline, element):
         if element in self.widgets:
-            self.widgets[element].remove()
+            widget = self.widgets[element]
+            del self.widgets[element]
+            widget.remove()
+            widget.removeFromSelection()
 

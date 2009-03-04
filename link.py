@@ -4,10 +4,11 @@ import view
 import controller
 from receiver import receiver, handler
 import gst
+import selectable
 
-class Link(view.View, goocanvas.Polyline):
+class Link(selectable.Selectable, goocanvas.Polyline):
 
-    class Controller(controller.Controller):
+    class Controller(selectable.Controller):
 
         def enter(self, item, target):
             self._view.hilight()
@@ -15,15 +16,19 @@ class Link(view.View, goocanvas.Polyline):
         def leave(self, item, target):
             self._view.unhilight()
 
-    def __init__(self, src, sink):
+        def set_pos(self, item, target):
+            pass
+
+    def __init__(self, src, sink, selection):
         goocanvas.Polyline.__init__(self)
-        view.View.__init__(self)
+        selectable.Selectable.__init__(self, selection)
         self.src = src
         self.sink = sink
         self.srcpad = src.pad
         self.sinkpad = sink.pad
-        self.props.stroke_color = "red"
+        self.props.stroke_color = "black"
         self.props.line_width = 2.0
+        self.props.end_arrow = True
         self.checkVisibility()
         self.link()
 
@@ -35,6 +40,21 @@ class Link(view.View, goocanvas.Polyline):
         except gst.LinkError:
             self.src.block()
             self.sink.block()
+
+    def unlink(self):
+        pass
+
+    def select(self):
+        self.props.stroke_color = "red"
+
+    def deselect(self):
+        self.props.stroke_color = "black"
+
+    def delete(self):
+        pass
+
+    def set_pos(self, pos):
+        pass
 
     def hilight(self):
         self.props.line_width = 3.0
@@ -52,10 +72,10 @@ class Link(view.View, goocanvas.Polyline):
 
     def checkVisibility(self):
         if self.srclinked and self.sinklinked:
-            self.props.visibility = goocanvas.ITEM_VISIBLE
+            self.props.line_dash = goocanvas.LineDash([])
             self.updateEndpoints()
         else:
-            self.props.visibility = goocanvas.ITEM_INVISIBLE
+            self.props.line_dash = goocanvas.LineDash([1.5, 1.5])
         return False
 
     srcpad = receiver()

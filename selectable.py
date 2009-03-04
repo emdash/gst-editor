@@ -19,6 +19,9 @@ class Selection(object):
     def replaceSelection(self, obj):
         self.setSelectionTo(set([obj]))
 
+    def clearSelection(self):
+        self.setSelectionTo(set())
+
     def setSelectionTo(self, objs):
         old = self.selected
         self.selected = objs
@@ -27,10 +30,15 @@ class Selection(object):
         for obj in old - self.selected:
             obj.deselect()
 
+    def delete(self):
+        objs = list(self.selected)
+        for obj in objs:
+            obj.delete()
+
     def __iter__(self):
         return iter(self.selected)
 
-class SelectableController(controller.Controller):
+class Controller(controller.Controller):
 
     def click(self, pos):
         if self._last_event.get_state() & gtk.gdk.SHIFT_MASK:
@@ -40,9 +48,17 @@ class SelectableController(controller.Controller):
         else:
             self._view.replaceSelection()
 
+    def set_pos(self, obj, pos):
+        controller.Controller.set_pos(self, obj, pos)
+        if self._view.selection:
+            deltas = ((obj, self.pos(obj) - self.pos(self._view)) for obj in
+                self._view.selection if obj is not self._view)
+            for obj, delta in deltas:
+                obj.set_pos(pos + delta)
+
 class Selectable(view.View):
 
-    Controller = SelectableController
+    Controller = Controller
 
     def __init__(self, selection):
         view.View.__init__(self)
@@ -65,3 +81,9 @@ class Selectable(view.View):
 
     def deselect(self):
         pass
+
+    def delete(self):
+        pass
+
+    def set_pos(self, (x, y)):
+        self.set_simple_transform(x, y, 1.0, 0)

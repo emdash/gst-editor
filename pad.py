@@ -19,7 +19,7 @@ class PadBaseView(view.View, goocanvas.Group):
 
     class Controller(controller.Controller):
 
-        __ARROW_COLOR__ = "red"
+        __ARROW_COLOR__ = "black"
 
         arrow = goocanvas.Polyline(
             stroke_color = __ARROW_COLOR__)
@@ -66,9 +66,10 @@ class PadBaseView(view.View, goocanvas.Group):
                     pad.hilight()
 
 
-    def __init__(self, pad, element):
+    def __init__(self, pad, element, selection):
         self.pad = pad
         self.element = element
+        self.selection = selection
         goocanvas.Group.__init__(self)
         view.View.__init__(self)
         self.__createUi()
@@ -107,9 +108,9 @@ class PadBaseView(view.View, goocanvas.Group):
 
     def linkPads(self, other):
         if self.direction() == gst.PAD_SRC:
-            link = Link(self, other)
+            link = Link(self, other, self.selection)
         else:
-            link = Link(other, self)
+            link = Link(other, self, self.selection)
         self.links.append(link)
         other.links.append(link)
         self.get_canvas().get_root_item().add_child(link)
@@ -222,12 +223,12 @@ class SometimesTemplateView(PadTemplateView):
     def linkSink(self, other):
         pass
 
-def make_pad_view(pad, element):
+def make_pad_view(pad, element, selection):
     if isinstance(pad, gst.Pad):
-        return PadView(pad, element)
+        return PadView(pad, element, selection)
     elif pad.presence == gst.PAD_REQUEST:
-        return RequestTemplateView(pad, element)
+        return RequestTemplateView(pad, element, selection)
     elif pad.presence == gst.PAD_SOMETIMES:
-        return SometimesTemplateView(pad, element)
+        return SometimesTemplateView(pad, element, selection)
     return None
 
