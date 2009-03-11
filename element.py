@@ -126,6 +126,14 @@ class ElementView(selectable.Selectable, goocanvas.Group):
         self.__update()
 
     def __removePad(self, pad):
+        if pad.get_direction() == gst.PAD_SRC:
+            widget = self.__sourcePads[pad]
+            del self.__sourcePads[pad]
+        else:
+            widget = self.__sinkPads[pad]
+            del self.__sinkPads[pad]
+        widget.unlinkAll()
+        widget.remove()
         self.__update()
 
 ## class methods

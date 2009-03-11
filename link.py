@@ -29,7 +29,6 @@ class Link(selectable.Selectable, goocanvas.Polyline):
         self.props.stroke_color = "black"
         self.props.line_width = 2.0
         self.props.end_arrow = True
-        self.props.pointer_events = 
         self.checkVisibility()
         self.link()
 

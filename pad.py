@@ -120,6 +120,10 @@ class PadBaseView(view.View, goocanvas.Group):
     def unlink(self, link):
         self.links.remove(link)
 
+    def unlinkAll(self):
+        for link in self.links:
+            link.delete()
+
     def updateLinks(self):
         for link in self.links:
             link.updateEndpoints()

@@ -1,0 +1,99 @@
+Disclaimer
+
+    This software is still in very early stages of development, so don't expect
+    much. It's also unstable, and experimental, and might trash your system
+    and/or data. Use at your own risk.
+
+    Other than that, you should have some understanding of programming with
+    GStreamer at the application level, or at least how to use the
+    command-line tools such as gst-launch, or at the very very least you
+    should understand the difference between an element, a pad, and a pad
+    template, and have some idea of how to connect them together. The more you
+    know about GStreamer, the more sense this application will make. 
+
+    This is a low-level visualization tool, not a high-level synthesizer/video
+    effect processor. If that's what you want, it's already been done. Go
+    check out PureData or the various GUIs that exist for csound. While it is
+    in theory possible to construct such things with this application, doing
+    so is likely to be painful and not very functional. One day, perhaps.
+
+Installing:
+
+    * run chmod +x gst-editor
+    * there is currently no installation proceedure
+
+Running:
+
+    run ./gst-editor from this directory
+
+Manual
+
+    This application allows you to construct gstreamer pipeliens in an interactive
+    manner. 
+
+    The editor window is divided into several parts:
+
+    -----------------------------------------------------------------------
+    |                                                                     |
+    -----------------------------------------------------------------------
+    |  pipeline toolbar                                                   |
+    -----------------------------------------------------------------------
+    |                  |                                                  |
+    |                  |                                                  |
+    |                  |  Pipeline Editor                                 |
+    |                  |                                                  |
+    |   Property       |                                                  |
+    |   Editor         |                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    | -----------------|                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    |   Element        |                                                  |
+    |   Browser        |                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    |                  |                                                  |
+    -----------------------------------------------------------------------
+
+    To add elements to the pipeline you simply drag them from the element browser
+    and onto the pipeline editor.
+
+    You can link elements together by connecting their pads together. To remove
+    objects, whether they be links or elements, you select them and choose
+    "Delete" from the tool bar.
+
+    When you are satisfied with your pipelien and want to test it, press play. If
+    the pipeline is able to play, this will happen right away. If not, you'll see
+    the pipeline stuck in either the "Paused" or "Ready" state. Examine the
+    console output to determine why the pipeline is not playing, and try again.
+
+    The pipeline can be stoped by pressing the "Null" button.
+
+    Elements have propertys which can be changed at any time. Selecting an element
+    will make its properties available in the Property Editor. You simply change
+    them as you see fit, the changes will take effect immediately.
+
+What Works
+
+    * Adding and removing elements from the timeline, 
+    * linking arbitrary pads.
+    * selection
+    * deletion
+
+What Doesn't
+
+    * Property Editor
+    * No support for saving or loading pipelines
+    * Undo/Redo haven't been implemented
+    * linking pad templates
+    * no way to view or manipulate pad caps
