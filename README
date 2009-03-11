@@ -68,6 +68,12 @@ Manual
     To add elements to the pipeline you simply drag them from the element browser
     and onto the pipeline editor.
 
+    *HINT* You can add files more easily by choosing "add filesrc" from the
+    toolbar, or by dragging and dropping files from nautilus, etc. Note that
+    just becuause they appear in the pipeline editor doesn't mean they're
+    going to work with gstreamer. GSTEditor assumes nothing about the files
+    you add.
+
     You can link elements together by connecting their pads together. To remove
     objects, whether they be links or elements, you select them and choose
     "Delete" from the tool bar.
