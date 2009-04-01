@@ -217,7 +217,7 @@ class GSTEditor(gtk.Window):
             ("View", None, _("_View")),
         ))
         PipelineStateAction.addStateActions(actiongroup, self.pipeline)
-        m.insert_action_group(actiongroup)
+        m.insert_action_group(actiongroup, 0)
         m.add_ui_from_string(ui)
 
     def __messageHandler(self, bus, message):
