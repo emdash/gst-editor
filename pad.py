@@ -157,7 +157,9 @@ class PadView(PadBaseView):
 
     def canLink(self, other):
         return ((not self.pad.is_linked()) and isinstance(other, PadView) and
-            (self.pad.can_link(other.pad) or other.pad.can_link(self.pad)))
+            (not (self.pad is other.pad)) and
+            (self.pad.can_link(other.pad) or other.pad.can_link(self.pad))
+        )
 
     def unlink(self, link):
         PadBaseView.unlink(self, link)
