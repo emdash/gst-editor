@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 import gobject
 gobject.threads_init()
 import pygtk
