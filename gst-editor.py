@@ -89,6 +89,8 @@ class PipelineStateAction(gtk.Action):
     def __messageHandler(self, bus, message):
         if message.type == gst.MESSAGE_STATE_CHANGED:
             old, new, pending = message.parse_state_changed()
+            if message.src != self.pipeline:
+                return
             if old == self.state:
                 self.deactivateProxies()
             if pending == self.state:
